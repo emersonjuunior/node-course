@@ -1,3 +1,4 @@
+const { where } = require("sequelize");
 const Product = require("../models/product");
 
 exports.getAddProduct = (req, res, next) => {
@@ -8,25 +9,38 @@ exports.getAddProduct = (req, res, next) => {
   });
 };
 
-exports.postAddProduct = (req, res, next) => {
+exports.postAddProduct = async (req, res, next) => {
   const title = req.body.title;
   const imageUrl = req.body.imageUrl;
   const description = req.body.description;
   const price = req.body.price;
 
-  const product = new Product(null, title, imageUrl, description, price);
-  product.save();
-  res.redirect("/");
+  try {
+    await req.user.createProduct({
+      title,
+      imageUrl,
+      description,
+      price,
+    });
+
+    return res.redirect("/admin/products");
+  } catch (err) {
+    next(err);
+  }
 };
 
-exports.getEditProduct = (req, res, next) => {
+exports.getEditProduct = async (req, res, next) => {
   const editMode = req.query.edit;
   if (!editMode) {
     return res.redirect("/");
   }
 
   const productId = req.params.productId;
-  Product.findById(productId, (product) => {
+
+  try {
+    const products = await req.user.getProducts({ where: { id: productId } });
+    const product = products[0];
+
     if (!product) {
       return res.redirect("/");
     }
@@ -37,35 +51,50 @@ exports.getEditProduct = (req, res, next) => {
       editing: editMode,
       product: product,
     });
-  });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.postEditProduct = (req, res, next) => {
-  const productId = req.body.productId;
-  const title = req.body.title;
-  const imageUrl = req.body.imageUrl;
-  const description = req.body.description;
-  const price = req.body.price;
+  const { productId, title, imageUrl, description, price } = req.body;
 
-  const updatedProduct = new Product(
-    productId,
-    title,
-    imageUrl,
-    description,
-    price
-  );
+  Product.findByPk(productId)
+    .then((product) => {
+      product.title = title;
+      product.price = price;
+      product.description = description;
+      product.imageUrl = imageUrl;
 
-  updatedProduct.save();
-
-  res.redirect("/admin/products")
+      // update on db
+      return product.save();
+    })
+    .then(() => res.redirect("/admin/products"))
+    .catch((err) => console.log(err));
 };
 
-exports.getProducts = (req, res, next) => {
-  Product.fetchAll((products) => {
-    res.render("admin/products", {
+exports.getProducts = async (req, res, next) => {
+  try {
+    const products = await req.user.getProducts();
+
+    return res.render("admin/products", {
       prods: products,
       pageTitle: "Admin Products",
       path: "/admin/products",
     });
-  });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.postDeleteProduct = async (req, res, next) => {
+  try {
+    const { productId } = req.body;
+
+    await Product.destroy({ where: { id: productId } });
+
+    return res.redirect("/admin/products");
+  } catch (err) {
+    next(err);
+  }
 };
