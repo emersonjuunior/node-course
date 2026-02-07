@@ -1,4 +1,3 @@
-const { where } = require("sequelize");
 const Product = require("../models/product");
 
 exports.getAddProduct = (req, res, next) => {
@@ -10,20 +9,14 @@ exports.getAddProduct = (req, res, next) => {
 };
 
 exports.postAddProduct = async (req, res, next) => {
-  const title = req.body.title;
-  const imageUrl = req.body.imageUrl;
-  const description = req.body.description;
-  const price = req.body.price;
+  const { title, imageUrl, description, price } = req.body;
 
   try {
-    await req.user.createProduct({
-      title,
-      imageUrl,
-      description,
-      price,
-    });
+    const product = new Product(title, price, description, imageUrl);
 
-    return res.redirect("/admin/products");
+    await product.save();
+
+    res.redirect("/admin/products");
   } catch (err) {
     next(err);
   }
@@ -38,8 +31,7 @@ exports.getEditProduct = async (req, res, next) => {
   const productId = req.params.productId;
 
   try {
-    const products = await req.user.getProducts({ where: { id: productId } });
-    const product = products[0];
+    const product = await Product.findById(productId);
 
     if (!product) {
       return res.redirect("/");
@@ -49,33 +41,29 @@ exports.getEditProduct = async (req, res, next) => {
       pageTitle: "Edit Product",
       path: "/admin/edit-product",
       editing: editMode,
-      product: product,
+      product,
     });
   } catch (err) {
     next(err);
   }
 };
 
-exports.postEditProduct = (req, res, next) => {
+exports.postEditProduct = async (req, res, next) => {
   const { productId, title, imageUrl, description, price } = req.body;
 
-  Product.findByPk(productId)
-    .then((product) => {
-      product.title = title;
-      product.price = price;
-      product.description = description;
-      product.imageUrl = imageUrl;
+  try {
+    const product = new Product(title, price, description, imageUrl, productId);
+    await product.save();
 
-      // update on db
-      return product.save();
-    })
-    .then(() => res.redirect("/admin/products"))
-    .catch((err) => console.log(err));
+    res.redirect("/admin/products");
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.getProducts = async (req, res, next) => {
   try {
-    const products = await req.user.getProducts();
+    const products = await Product.fetchAll();
 
     return res.render("admin/products", {
       prods: products,
@@ -87,7 +75,7 @@ exports.getProducts = async (req, res, next) => {
   }
 };
 
-exports.postDeleteProduct = async (req, res, next) => {
+/* exports.postDeleteProduct = async (req, res, next) => {
   try {
     const { productId } = req.body;
 
@@ -97,4 +85,4 @@ exports.postDeleteProduct = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-};
+}; */

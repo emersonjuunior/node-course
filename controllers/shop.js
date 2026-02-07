@@ -2,7 +2,7 @@ const Product = require("../models/product");
 
 exports.getProducts = async (req, res, next) => {
   try {
-    const products = await Product.findAll();
+    const products = await Product.fetchAll();
     return res.render("shop/product-list", {
       prods: products,
       pageTitle: "All products",
@@ -17,7 +17,7 @@ exports.getProductDetails = async (req, res, next) => {
   const productId = req.params.productId;
 
   try {
-    const product = await Product.findByPk(productId);
+    const product = await Product.findById(productId);
 
     if (!product) {
       return res.redirect("/");
@@ -35,7 +35,7 @@ exports.getProductDetails = async (req, res, next) => {
 
 exports.getIndex = async (req, res, next) => {
   try {
-    const products = await Product.findAll();
+    const products = await Product.fetchAll();
     return res.render("shop/index", {
       prods: products,
       pageTitle: "Shop",
@@ -46,7 +46,7 @@ exports.getIndex = async (req, res, next) => {
   }
 };
 
-exports.getCart = async (req, res, next) => {
+/* exports.getCart = async (req, res, next) => {
   const user = req.user;
 
   try {
@@ -141,7 +141,7 @@ exports.getOrders = async (req, res, next) => {
   const user = req.user;
 
   try {
-    const orders = await user.getOrders({include: ["products"]});
+    const orders = await user.getOrders({ include: ["products"] });
 
     res.render("shop/orders", {
       pageTitle: "Your Orders",
@@ -152,3 +152,4 @@ exports.getOrders = async (req, res, next) => {
     next(err);
   }
 };
+ */
